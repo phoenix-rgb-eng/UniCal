@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>UniCal – Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;1,9..144,300&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="global.css"/>
+  <style>
+    .dash-grid { display:grid; grid-template-columns:1fr 1fr; gap:20px; }
+    .dash-wide { grid-column:1/-1; }
+
+    .stats-strip { display:grid; grid-template-columns:repeat(4,1fr); gap:14px; margin-bottom:24px; }
+    .stat-card { background:var(--surface); border:1.5px solid var(--border); border-radius:var(--radius); padding:18px 20px; box-shadow:var(--shadow-sm); animation:fadeUp 0.4s ease both; }
+    .stat-card:nth-child(2){animation-delay:.05s}.stat-card:nth-child(3){animation-delay:.1s}.stat-card:nth-child(4){animation-delay:.15s}
+    .stat-label { font-size:0.72rem; font-weight:600; letter-spacing:0.07em; text-transform:uppercase; color:var(--text-muted); margin-bottom:6px; }
+    .stat-value { font-family:var(--font-display); font-size:2rem; font-weight:300; line-height:1; letter-spacing:-0.03em; }
+    .stat-sub { font-size:0.75rem; color:var(--text-muted); margin-top:4px; }
+
+    .dash-card { background:var(--surface); border:1.5px solid var(--border); border-radius:var(--radius); padding:22px; box-shadow:var(--shadow-sm); animation:fadeUp 0.4s ease both; }
+    .dash-card-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; }
+    .dash-card-title { font-size:1rem; font-weight:500; }
+    .dash-card-title em { font-style:italic; font-family:var(--font-display); }
+
+    .dash-row { display:flex; align-items:center; gap:12px; padding:10px 0; border-bottom:1px solid var(--border); animation:fadeUp 0.3s ease both; }
+    .dash-row:last-child { border-bottom:none; }
+    .dash-row-stripe { width:4px; height:36px; border-radius:2px; flex-shrink:0; }
+    .dash-row-body { flex:1; min-width:0; }
+    .dash-row-title { font-size:0.88rem; font-weight:500; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .dash-row-meta { font-size:0.75rem; color:var(--text-muted); display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-top:2px; }
+
+    .due-chip { font-size:0.7rem; font-weight:600; padding:2px 8px; border-radius:99px; background:var(--surface-2); color:var(--text-muted); }
+    .due-chip.soon  { background:#fdeedd; color:var(--high); }
+    .due-chip.today { background:var(--urgent); color:white; }
+
+    .today-banner { background:var(--text); color:var(--surface); border-radius:var(--radius); padding:22px 24px; display:flex; align-items:center; justify-content:space-between; gap:16px; animation:fadeUp 0.4s ease both; }
+    .today-date-big { font-family:var(--font-display); font-size:3.6rem; font-weight:300; letter-spacing:-0.04em; line-height:1; }
+    .today-info { text-align:right; }
+    .today-day { font-size:1rem; font-weight:500; opacity:0.9; }
+    .today-month { font-size:0.8rem; opacity:0.55; margin-top:2px; }
+    .today-events-count { font-size:0.78rem; opacity:0.7; margin-top:10px; }
+
+    @media (max-width:900px) {
+      .stats-strip { grid-template-columns:repeat(2,1fr); }
+      .dash-grid { grid-template-columns:1fr; }
+      .dash-wide { grid-column:auto; }
+    }
+  </style>
+</head>
+<body>
+  <a href="#main-content" class="skip-link">Skip to main content</a>
+  <div class="app-shell">
+    <aside class="sidebar" aria-label="Main navigation"></aside>
+    <button id="navToggle" class="nav-toggle" aria-label="Open navigation menu" aria-expanded="false">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+    </button>
+    <main class="main-content" id="main-content">
+      <header class="page-header">
+        <div>
+          <h1 class="page-title">Good <em id="greeting-time">day</em>, <span id="greeting-name">there</span></h1>
+          <p class="page-subtitle">Here's what's coming up for you.</p>
+        </div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap">
+          <a href="deadlines.html" class="btn btn-secondary btn-sm">+ Deadline</a>
+          <a href="tasks.html" class="btn btn-primary btn-sm">+ Task</a>
+        </div>
+      </header>
+
+      <section aria-label="Summary statistics">
+        <div class="stats-strip" id="statsStrip"></div>
+      </section>
+
+      <div class="dash-grid">
+        <div class="today-banner" aria-label="Today's date">
+          <div class="today-date-big" id="today-day-num"></div>
+          <div class="today-info">
+            <div class="today-day" id="today-weekday"></div>
+            <div class="today-month" id="today-month-year"></div>
+            <div class="today-events-count" id="today-count"></div>
+          </div>
+        </div>
+
+        <div class="dash-card" style="animation-delay:.05s" aria-label="Quick actions">
+          <div class="dash-card-header"><h2 class="dash-card-title">Quick <em>actions</em></h2></div>
+          <div style="display:flex;flex-direction:column;gap:10px">
+            <a href="deadlines.html" class="btn btn-ghost" style="justify-content:flex-start;gap:10px">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>Add a deadline
+            </a>
+            <a href="tasks.html" class="btn btn-ghost" style="justify-content:flex-start;gap:10px">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>Add a task
+            </a>
+            <a href="calendar.html" class="btn btn-ghost" style="justify-content:flex-start;gap:10px">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>Open calendar
+            </a>
+            <a href="courses.html" class="btn btn-ghost" style="justify-content:flex-start;gap:10px">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>Manage courses
+            </a>
+          </div>
+        </div>
+
+        <div class="dash-card dash-wide" style="animation-delay:.1s">
+          <div class="dash-card-header">
+            <h2 class="dash-card-title">Upcoming <em>deadlines</em></h2>
+            <a href="deadlines.html" class="btn btn-ghost btn-sm">View all</a>
+          </div>
+          <div id="upcomingDeadlines" aria-label="Upcoming deadlines" aria-live="polite"></div>
+        </div>
+
+        <div class="dash-card dash-wide" style="animation-delay:.15s">
+          <div class="dash-card-header">
+            <h2 class="dash-card-title">Upcoming <em>tasks</em></h2>
+            <a href="tasks.html" class="btn btn-ghost btn-sm">View all</a>
+          </div>
+          <div id="upcomingTasks" aria-label="Upcoming tasks" aria-live="polite"></div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script src="data.js"></script>
+  <script src="sidebar.js"></script>
+  <script>
+    const sess = requireAuth();
+    buildSidebar();
+    initMobileSidebar();
+
+    (function() {
+      const h = new Date().getHours();
+      document.getElementById('greeting-time').textContent = h<12?'morning':h<17?'afternoon':'evening';
+      const user = getUsers()[sess];
+      document.getElementById('greeting-name').textContent = (user?.displayName||sess).split(' ')[0];
+    })();
+
+    (function() {
+      const now = new Date();
+      document.getElementById('today-day-num').textContent = now.getDate();
+      document.getElementById('today-weekday').textContent = now.toLocaleDateString('en-GB',{weekday:'long'});
+      document.getElementById('today-month-year').textContent = now.toLocaleDateString('en-GB',{month:'long',year:'numeric'});
+    })();
+
+    function renderStats() {
+      const dls = getDeadlines().filter(d=>!d.done), tasks = getTasks().filter(t=>!t.done);
+      const courses = getCourses(), urgent = [...dls,...tasks].filter(x=>daysUntil(x.due)<=3).length;
+      document.getElementById('statsStrip').innerHTML = [
+        {label:'Deadlines',value:dls.length,   sub:'pending',    color:'var(--urgent)'},
+        {label:'Tasks',    value:tasks.length,  sub:'to-do',      color:'var(--low)'},
+        {label:'Courses',  value:courses.length,sub:'enrolled',   color:'var(--medium)'},
+        {label:'Due soon', value:urgent,        sub:'within 3 days',color:urgent?'var(--urgent)':'var(--text-muted)'},
+      ].map((s,i)=>`<article class="stat-card" style="animation-delay:${i*.05}s" aria-label="${s.label}: ${s.value} ${s.sub}">
+        <div class="stat-label">${s.label}</div>
+        <div class="stat-value" style="color:${s.color}">${s.value}</div>
+        <div class="stat-sub">${s.sub}</div>
+      </article>`).join('');
+
+      const today = todayISO();
+      const n = [...dls,...tasks].filter(x=>x.due===today).length;
+      document.getElementById('today-count').textContent = n ? `${n} item${n!==1?'s':''} due today` : 'Nothing due today';
+    }
+
+    function buildRows(items, container) {
+      container.innerHTML = '';
+      if (!items.length) { container.innerHTML = `<div class="empty-state"><div class="empty-state-icon">🎉</div><div class="empty-state-text">Nothing coming up soon!</div></div>`; return; }
+      items.forEach((item,i) => {
+        const c = courseById(item.course), days = daysUntil(item.due);
+        let chipClass='due-chip', chipLabel = days<0?'Overdue':days===0?'Today':`${days}d`;
+        if (days===0) chipClass+=' today'; else if (days<=3&&days>0) chipClass+=' soon';
+        const row = document.createElement('div');
+        row.className='dash-row'; row.style.animationDelay=`${i*.05}s`;
+        row.innerHTML=`
+          <div class="dash-row-stripe" style="background:${c.bg}" aria-hidden="true"></div>
+          <div class="dash-row-body">
+            <div class="dash-row-title">${item.title}</div>
+            <div class="dash-row-meta">
+              <span class="badge" style="background:${c.bg}33;color:${c.dark}">${c.label}</span>
+              <span>${fmtDate(item.due)}</span>
+            </div>
+          </div>
+          <span class="${chipClass}" aria-label="Due in ${chipLabel}">${chipLabel}</span>`;
+        container.appendChild(row);
+      });
+    }
+
+    renderStats();
+    buildRows(getDeadlines().filter(d=>!d.done).sort((a,b)=>a.due.localeCompare(b.due)).slice(0,5), document.getElementById('upcomingDeadlines'));
+    buildRows(getTasks().filter(t=>!t.done).sort((a,b)=>a.due.localeCompare(b.due)).slice(0,5), document.getElementById('upcomingTasks'));
+  </script>
+</body>
+</html>

@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>UniCal – Courses</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;1,9..144,300&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="global.css"/>
+  <style>
+    .courses-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(240px,1fr)); gap:16px; }
+    .course-tile { background:var(--surface); border:2px solid var(--border); border-radius:var(--radius); padding:20px; position:relative; animation:fadeUp 0.35s ease both; transition:box-shadow 0.15s,transform 0.15s; }
+    .course-tile:hover{box-shadow:var(--shadow);transform:translateY(-2px);}
+    .tile-color-row{display:flex;align-items:center;gap:10px;margin-bottom:12px;}
+    .tile-swatch{width:32px;height:32px;border-radius:50%;border:2px solid rgba(0,0,0,0.12);cursor:pointer;padding:0;background:transparent;overflow:hidden;flex-shrink:0;}
+    .tile-swatch input[type="color"]{width:200%;height:200%;transform:translate(-25%,-25%);cursor:pointer;border:none;padding:0;}
+    .tile-name-input{width:100%;font-size:1rem;font-weight:600;font-family:var(--font-body);color:var(--text);border:none;background:transparent;outline:none;padding:2px 0;border-bottom:1.5px solid transparent;transition:border-color 0.15s;}
+    .tile-name-input:focus{border-bottom-color:var(--border-med);}
+    .tile-stats{font-size:0.75rem;color:var(--text-muted);margin-top:8px;}
+    .tile-del{position:absolute;top:12px;right:12px;width:24px;height:24px;border-radius:50%;background:var(--surface-2);border:none;display:flex;align-items:center;justify-content:center;color:var(--text-muted);cursor:pointer;opacity:0;transition:opacity 0.15s,background 0.15s;}
+    .course-tile:hover .tile-del{opacity:1;}.tile-del:hover{background:#fde8e7;color:var(--urgent);}
+    .add-course-tile{border:2px dashed var(--border-med);border-radius:var(--radius);padding:20px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;cursor:pointer;color:var(--text-muted);font-size:0.85rem;font-weight:500;min-height:140px;transition:all 0.15s ease;background:transparent;font-family:var(--font-body);}
+    .add-course-tile:hover{background:var(--surface);color:var(--text);border-color:var(--text);}
+    .info-banner{background:var(--surface);border:1.5px solid var(--border);border-radius:var(--radius);padding:16px 20px;margin-bottom:24px;font-size:0.85rem;color:var(--text-muted);display:flex;gap:10px;align-items:flex-start;}
+  </style>
+</head>
+<body>
+  <a href="#main-content" class="skip-link">Skip to main content</a>
+  <div class="app-shell">
+    <aside class="sidebar" aria-label="Main navigation"></aside>
+    <button id="navToggle" class="nav-toggle" aria-label="Open navigation menu" aria-expanded="false">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+    </button>
+    <main class="main-content" id="main-content">
+      <header class="page-header">
+        <div><h1 class="page-title"><em>Courses</em></h1><p class="page-subtitle" id="courseSubtitle">Loading…</p></div>
+        <button class="btn btn-primary" onclick="addCourse()" aria-label="Add new course">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Add course
+        </button>
+      </header>
+
+      <div class="info-banner" role="note">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink:0;margin-top:1px" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        <span>Click a course name to rename it. Use the colour swatch to change its colour. Courses are used to tag deadlines and tasks throughout UniCal.</span>
+      </div>
+
+      <div id="coursesGrid" class="courses-grid" aria-label="Courses" aria-live="polite"></div>
+    </main>
+  </div>
+
+  <script src="data.js"></script>
+  <script src="sidebar.js"></script>
+  <script>
+    requireAuth(); buildSidebar(); initMobileSidebar();
+
+    function renderCourses(){
+      const courses=getCourses(),dls=getDeadlines(),tasks=getTasks();
+      document.getElementById('courseSubtitle').textContent=`${courses.length} course${courses.length!==1?'s':''} enrolled`;
+      const grid=document.getElementById('coursesGrid');grid.innerHTML='';
+      courses.forEach((c,i)=>{
+        const dlCount=dls.filter(d=>d.course===c.id&&!d.done).length,tkCount=tasks.filter(t=>t.course===c.id&&!t.done).length;
+        const tile=document.createElement('article');
+        tile.className='course-tile';tile.style.animationDelay=`${i*.05}s`;
+        tile.setAttribute('aria-label',`${c.label} course`);
+        tile.innerHTML=`
+          <button class="tile-del" onclick="deleteCourse('${c.id}')" aria-label="Remove ${c.label} course" title="Remove course">
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>
+          <div class="tile-color-row">
+            <label class="tile-swatch" style="background:${c.bg}" aria-label="Change colour for ${c.label}">
+              <input type="color" value="${c.bg}" oninput="updateColor('${c.id}',this.value,this.closest('.tile-swatch'))" aria-label="Pick colour"/>
+            </label>
+            <div style="flex:1;min-width:0">
+              <input class="tile-name-input" value="${c.label}" placeholder="Course name" onchange="updateName('${c.id}',this.value)" onblur="updateName('${c.id}',this.value)" aria-label="Course name: ${c.label}"/>
+            </div>
+          </div>
+          <div class="tile-stats"><span style="color:${c.dark}">●</span> ${dlCount} pending deadline${dlCount!==1?'s':''} · ${tkCount} pending task${tkCount!==1?'s':''}</div>`;
+        grid.appendChild(tile);
+      });
+      const addTile=document.createElement('button');
+      addTile.className='add-course-tile';addTile.onclick=addCourse;addTile.setAttribute('aria-label','Add new course');
+      addTile.innerHTML=`<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>Add new course`;
+      grid.appendChild(addTile);
+    }
+
+    function updateColor(id,hex,swatchEl){const courses=getCourses(),c=courses.find(x=>x.id===id);if(!c)return;c.bg=hex;c.dark=deriveDark(hex);swatchEl.style.background=hex;saveCourses(courses);}
+    function updateName(id,name){if(!name.trim())return;const courses=getCourses(),c=courses.find(x=>x.id===id);if(c){c.label=name.trim();saveCourses(courses);}}
+    function addCourse(){
+      const courses=getCourses();
+      courses.push({id:'c_'+Date.now(),label:'New Course',bg:PALETTE[courses.length%PALETTE.length],dark:deriveDark(PALETTE[courses.length%PALETTE.length])});
+      saveCourses(courses);renderCourses();showToast('Course added');
+      setTimeout(()=>{const inputs=document.querySelectorAll('.tile-name-input');const last=inputs[inputs.length-1];if(last){last.focus();last.select();}},100);
+    }
+    function deleteCourse(id){
+      const courses=getCourses();
+      if(courses.length<=1){showToast('You need at least one course.','error');return;}
+      if(!confirm('Remove this course? Deadlines and tasks linked to it will still exist.'))return;
+      saveCourses(courses.filter(c=>c.id!==id));renderCourses();showToast('Course removed','info');
+    }
+
+    renderCourses();
+  </script>
+</body>
+</html>
