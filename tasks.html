@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="description" content="UniCal Tasks — manage your to-do list with priority and due dates."/>
+  <title>UniCal – Tasks</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;1,9..144,300&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="../css/global.css"/>
+  <style>
+    .task-list {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 12px;
+    }
+
+    .task-card {
+      background: var(--surface);
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px 18px;
+      display: flex;
+      gap: 12px;
+      align-items: flex-start;
+      box-shadow: var(--shadow-sm);
+      animation: fadeUp 0.35s ease both;
+      transition: box-shadow 0.15s, transform 0.15s;
+      position: relative;
+    }
+
+    .task-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 3px;
+      border-radius: var(--radius) var(--radius) 0 0;
+    }
+
+    .task-card.p-urgent::before { background: var(--urgent); }
+    .task-card.p-high::before   { background: var(--high); }
+    .task-card.p-medium::before { background: var(--medium); }
+    .task-card.p-low::before    { background: var(--low); }
+
+    .task-card:hover { box-shadow: var(--shadow); transform: translateY(-2px); }
+    .task-card.done  { opacity: 0.55; }
+    .task-card.done .task-title { text-decoration: line-through; }
+
+    .task-check {
+      width: 20px;
+      height: 20px;
+      border-radius: 6px;
+      border: 2px solid var(--border-med);
+      flex-shrink: 0;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-top: 1px;
+      transition: all 0.15s ease;
+      background: transparent;
+    }
+
+    .task-check:hover { border-color: var(--medium); }
+    .task-card.done .task-check { background: var(--medium); border-color: var(--medium); }
+
+    .task-body { flex: 1; min-width: 0; }
+
+    .task-title {
+      font-size: 0.93rem;
+      font-weight: 500;
+      margin-bottom: 4px;
+    }
+
+    .task-desc {
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      line-height: 1.5;
+      margin-bottom: 6px;
+    }
+
+    .task-meta {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    .task-date {
+      font-size: 0.72rem;
+      color: var(--text-muted);
+    }
+
+    .task-actions {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+      flex-shrink: 0;
+    }
+  </style>
+</head>
+<body>
+  <a href="#main-content" class="skip-link">Skip to main content</a>
+
+  <div class="app-shell">
+    <aside class="sidebar" aria-label="Main navigation"></aside>
+
+    <button id="navToggle" class="nav-toggle" aria-label="Open navigation menu" aria-expanded="false">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+        <line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/>
+      </svg>
+    </button>
+
+    <main class="main-content" id="main-content">
+      <header class="page-header">
+        <div>
+          <h1 class="page-title"><em>Tasks</em></h1>
+          <p class="page-subtitle" id="taskSubtitle">Loading…</p>
+        </div>
+        <button class="btn btn-primary" onclick="openAdd()" aria-label="Add new task">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Add task
+        </button>
+      </header>
+
+      <!-- Filters -->
+      <div class="chip-row" role="group" aria-label="Filter tasks by priority">
+        <button class="chip active" onclick="setFilter('all',this)" aria-pressed="true">All</button>
+        <button class="chip" onclick="setFilter('urgent',this)" aria-pressed="false">Urgent</button>
+        <button class="chip" onclick="setFilter('high',this)" aria-pressed="false">High</button>
+        <button class="chip" onclick="setFilter('medium',this)" aria-pressed="false">Medium</button>
+        <button class="chip" onclick="setFilter('low',this)" aria-pressed="false">Low</button>
+        <button class="chip" onclick="setFilter('done',this)" aria-pressed="false">Completed</button>
+      </div>
+
+      <!-- Task grid -->
+      <div id="taskList" class="task-list" aria-label="Task list" aria-live="polite">
+        <!-- populated by JS -->
+      </div>
+    </main>
+  </div>
+
+  <!-- Add / Edit Modal -->
+  <div class="modal-overlay" id="taskModal" role="dialog" aria-modal="true" aria-labelledby="taskModalTitle">
+    <div class="modal">
+      <div class="modal-header">
+        <h2 class="modal-title" id="taskModalTitle">Add <em>task</em></h2>
+        <button class="modal-close" onclick="closeModal()" aria-label="Close dialog">×</button>
+      </div>
+
+      <div class="field-group">
+        <label class="field-label" for="tk-title">Title <span aria-hidden="true">*</span></label>
+        <input class="field-input" id="tk-title" type="text" placeholder="e.g. Read chapter 5" required aria-required="true"/>
+      </div>
+      <div class="field-group">
+        <label class="field-label" for="tk-desc">Description (optional)</label>
+        <textarea class="field-textarea" id="tk-desc" placeholder="Any notes…" rows="2"></textarea>
+      </div>
+      <div class="field-group">
+        <label class="field-label" for="tk-course">Course <span aria-hidden="true">*</span></label>
+        <select class="field-select" id="tk-course" required aria-required="true"></select>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div class="field-group">
+          <label class="field-label" for="tk-due">Due date <span aria-hidden="true">*</span></label>
+          <input class="field-input" id="tk-due" type="date" required aria-required="true"/>
+        </div>
+        <div class="field-group">
+          <label class="field-label" for="tk-priority">Priority</label>
+          <select class="field-select" id="tk-priority">
+            <option value="urgent">Urgent</option>
+            <option value="high">High</option>
+            <option value="medium" selected>Medium</option>
+            <option value="low">Low</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="form-error" id="tk-error" role="alert" aria-live="polite"></div>
+
+      <div class="modal-actions">
+        <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+        <button class="btn btn-primary" onclick="saveTask()">Save task</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="../js/data.js"></script>
+  <script src="../js/sidebar.js"></script>
+  <script>
+    requireAuth();
+    buildSidebar('../');
+    initMobileSidebar();
+
+    let currentFilter = 'all';
+    let editingId = null;
+
+    function setFilter(f, btn) {
+      currentFilter = f;
+      document.querySelectorAll('.chip').forEach(c => {
+        c.classList.remove('active');
+        c.setAttribute('aria-pressed','false');
+      });
+      btn.classList.add('active');
+      btn.setAttribute('aria-pressed','true');
+      renderTasks();
+    }
+
+    function renderTasks() {
+      const all = getTasks();
+      let items;
+      if (currentFilter === 'done') {
+        items = all.filter(t => t.done);
+      } else if (currentFilter === 'all') {
+        items = all.filter(t => !t.done);
+      } else {
+        items = all.filter(t => !t.done && t.priority === currentFilter);
+      }
+      items.sort((a,b) => a.due.localeCompare(b.due));
+
+      const pending = all.filter(t=>!t.done).length;
+      document.getElementById('taskSubtitle').textContent =
+        `${pending} pending task${pending!==1?'s':''} · ${all.filter(t=>t.done).length} completed`;
+
+      const list = document.getElementById('taskList');
+      list.innerHTML = '';
+
+      if (!items.length) {
+        list.innerHTML = `<div class="empty-state" style="grid-column:1/-1"><div class="empty-state-icon">✅</div><div class="empty-state-text">No tasks here.<br>Add one to get going!</div></div>`;
+        return;
+      }
+
+      items.forEach((t, i) => {
+        const c    = courseById(t.course);
+        const days = daysUntil(t.due);
+        let urgencyLabel = days < 0 ? 'Overdue' : days === 0 ? 'Today' : `${days}d left`;
+        let urgencyColor = 'var(--text-muted)';
+        if (days < 0) urgencyColor = 'var(--urgent)';
+        else if (days <= 3) urgencyColor = 'var(--high)';
+
+        const card = document.createElement('article');
+        card.className = `task-card p-${t.priority}${t.done?' done':''}`;
+        card.style.animationDelay = `${i*0.04}s`;
+        card.setAttribute('aria-label', `${t.title}, ${t.done?'completed':'pending'}, due ${fmtDate(t.due)}`);
+
+        card.innerHTML = `
+          <button class="task-check" onclick="toggleTask(${t.id})" aria-label="${t.done?'Mark pending':'Mark done'}: ${t.title}">
+            ${t.done?`<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>`:''}
+          </button>
+          <div class="task-body">
+            <div class="task-title">${t.title}</div>
+            ${t.desc?`<div class="task-desc">${t.desc}</div>`:''}
+            <div class="task-meta">
+              <span class="badge" style="background:${c.bg}33;color:${c.dark}">${c.label}</span>
+              <span class="badge badge-${t.priority}">${t.priority}</span>
+              <span class="task-date">${fmtDate(t.due)}</span>
+              ${!t.done?`<span class="task-date" style="color:${urgencyColor};font-weight:600">${urgencyLabel}</span>`:''}
+            </div>
+          </div>
+          <div class="task-actions">
+            <button class="btn-icon" onclick="editTask(${t.id})" aria-label="Edit ${t.title}" title="Edit">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4z"/></svg>
+            </button>
+            <button class="btn-icon" onclick="deleteTask(${t.id})" aria-label="Delete ${t.title}" title="Delete">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/></svg>
+            </button>
+          </div>
+        `;
+        list.appendChild(card);
+      });
+    }
+
+    function toggleTask(id) {
+      const tasks = getTasks();
+      const t = tasks.find(x=>x.id===id);
+      if (t) { t.done = !t.done; saveTasks(tasks); renderTasks(); showToast(t.done?'Task done! 🎉':'Marked as pending'); }
+    }
+
+    function deleteTask(id) {
+      if (!confirm('Delete this task?')) return;
+      saveTasks(getTasks().filter(t=>t.id!==id));
+      renderTasks();
+      showToast('Task deleted','info');
+    }
+
+    function editTask(id) {
+      const t = getTasks().find(x=>x.id===id);
+      if (!t) return;
+      editingId = id;
+      populateCourseSelect();
+      document.getElementById('tk-title').value    = t.title;
+      document.getElementById('tk-desc').value     = t.desc || '';
+      document.getElementById('tk-course').value   = t.course;
+      document.getElementById('tk-due').value      = t.due;
+      document.getElementById('tk-priority').value = t.priority;
+      document.getElementById('taskModalTitle').innerHTML = 'Edit <em>task</em>';
+      document.getElementById('taskModal').classList.add('open');
+    }
+
+    function openAdd() {
+      editingId = null;
+      populateCourseSelect();
+      document.getElementById('tk-title').value    = '';
+      document.getElementById('tk-desc').value     = '';
+      document.getElementById('tk-due').value      = '';
+      document.getElementById('tk-priority').value = 'medium';
+      document.getElementById('tk-error').textContent = '';
+      document.getElementById('taskModalTitle').innerHTML = 'Add <em>task</em>';
+      document.getElementById('taskModal').classList.add('open');
+      setTimeout(()=>document.getElementById('tk-title').focus(), 100);
+    }
+
+    function closeModal() {
+      document.getElementById('taskModal').classList.remove('open');
+    }
+
+    function populateCourseSelect() {
+      const sel = document.getElementById('tk-course');
+      sel.innerHTML = '';
+      getCourses().forEach(c => {
+        const opt = document.createElement('option');
+        opt.value = c.id; opt.textContent = c.label;
+        sel.appendChild(opt);
+      });
+    }
+
+    function saveTask() {
+      const errEl = document.getElementById('tk-error');
+      errEl.textContent = '';
+      const title    = document.getElementById('tk-title').value.trim();
+      const desc     = document.getElementById('tk-desc').value.trim();
+      const course   = document.getElementById('tk-course').value;
+      const due      = document.getElementById('tk-due').value;
+      const priority = document.getElementById('tk-priority').value;
+      if (!title) { errEl.textContent = 'Please enter a title.'; return; }
+      if (!due)   { errEl.textContent = 'Please pick a due date.'; return; }
+
+      const tasks = getTasks();
+      if (editingId) {
+        const t = tasks.find(x=>x.id===editingId);
+        if (t) Object.assign(t, { title, desc, course, due, priority });
+      } else {
+        tasks.push({ id: nextId(tasks), title, desc, course, due, priority, done: false });
+      }
+      saveTasks(tasks);
+      closeModal();
+      renderTasks();
+      showToast(editingId ? 'Task updated' : 'Task added ✓');
+    }
+
+    document.getElementById('taskModal').addEventListener('click', e => {
+      if (e.target === document.getElementById('taskModal')) closeModal();
+    });
+
+    document.addEventListener('keydown', e => {
+      if (e.key === 'Escape') closeModal();
+    });
+
+    renderTasks();
+  </script>
+</body>
+</html>
