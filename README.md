@@ -42,23 +42,10 @@ unical/
 
 ---
 
-## How to run
-
-1. Unzip the folder.
-2. Open `unical/index.html` in any modern browser.
-3. Log in with the built-in demo account:
-   - **Username:** `phoenix`
-   - **Password:** `unicaldemo`
-4. Or click "Register" to create your own account.
-
-> No internet connection is required after fonts load. All data is stored locally in your browser.
-
----
-
 ## Design decisions
 
 ### Colours
-The palette is taken from the Adobe Color file referenced in the project baseline:
+The palette is taken from an Adobe Color file referenced in project baseline:
 - Blue `#A4CEFA`, Green `#9EFA90`, Pink `#DC99F5`, Yellow `#EABB1F`, Slate `#616C8F`
 
 Background uses a warm parchment tone (`#F0EBE3`) to reduce eye strain for long study sessions.
