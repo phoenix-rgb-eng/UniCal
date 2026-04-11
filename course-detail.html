@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>UniCal – Course Detail</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;1,9..144,300&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="global.css"/>
+  <style>
+    .course-header-bar { display:flex; align-items:center; gap:16px; margin-bottom:32px; animation:fadeUp 0.35s ease both; }
+    .course-swatch-lg { width:48px; height:48px; border-radius:50%; border:3px solid rgba(0,0,0,0.1); flex-shrink:0; }
+    .course-title-lg { font-family:var(--font-display); font-size:1.8rem; font-weight:300; }
+    .course-back { font-size:0.82rem; color:var(--text-muted); text-decoration:none; display:inline-flex; align-items:center; gap:6px; margin-bottom:16px; transition:color 0.15s; }
+    .course-back:hover { color:var(--text); text-decoration:none; }
+
+    .section-title { font-family:var(--font-display); font-size:1.15rem; font-weight:300; margin-bottom:12px; margin-top:28px; display:flex; align-items:center; gap:8px; }
+    .section-count { font-size:0.72rem; font-weight:600; background:var(--surface-2); color:var(--text-muted); padding:2px 8px; border-radius:99px; }
+
+    .cd-list { display:flex; flex-direction:column; gap:8px; margin-bottom:8px; }
+    .cd-card { background:var(--surface); border:1.5px solid var(--border); border-radius:var(--radius); padding:14px 16px; display:flex; align-items:center; gap:12px; box-shadow:var(--shadow-sm); animation:fadeUp 0.3s ease both; transition:box-shadow 0.15s,transform 0.15s; }
+    .cd-card:hover { box-shadow:var(--shadow); transform:translateY(-1px); }
+    .cd-card.done { opacity:0.5; }
+    .cd-card.done .cd-title { text-decoration:line-through; }
+    .cd-stripe { width:3px; align-self:stretch; border-radius:2px; flex-shrink:0; min-height:36px; }
+    .cd-body { flex:1; min-width:0; }
+    .cd-title { font-size:0.9rem; font-weight:500; margin-bottom:3px; }
+    .cd-meta { font-size:0.72rem; color:var(--text-muted); display:flex; align-items:center; gap:6px; flex-wrap:wrap; }
+    .cd-type-badge { font-size:0.62rem; font-weight:600; text-transform:uppercase; letter-spacing:0.05em; padding:1px 6px; border-radius:4px; background:var(--surface-2); color:var(--text-muted); }
+    .cd-location { display:inline-flex; align-items:center; gap:3px; }
+
+    .note-card { background:var(--surface); border:1.5px solid var(--border); border-radius:var(--radius); padding:16px 18px; box-shadow:var(--shadow-sm); animation:fadeUp 0.3s ease both; transition:box-shadow 0.15s,transform 0.15s; cursor:pointer; margin-bottom:8px; }
+    .note-card:hover { box-shadow:var(--shadow); transform:translateY(-1px); }
+    .note-card-title { font-size:0.9rem; font-weight:500; margin-bottom:4px; }
+    .note-card-preview { font-size:0.78rem; color:var(--text-muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .note-card-date { font-size:0.68rem; color:var(--text-muted); margin-top:4px; }
+
+    .cd-empty { font-size:0.82rem; color:var(--text-muted); padding:12px 0; font-style:italic; }
+
+    .cd-stats-row { display:flex; gap:12px; flex-wrap:wrap; margin-bottom:24px; animation:fadeUp 0.35s ease both; animation-delay:0.05s; }
+    .cd-stat { background:var(--surface); border:1.5px solid var(--border); border-radius:var(--radius-sm); padding:12px 16px; flex:1; min-width:100px; box-shadow:var(--shadow-sm); }
+    .cd-stat-val { font-family:var(--font-display); font-size:1.5rem; font-weight:300; line-height:1; }
+    .cd-stat-label { font-size:0.68rem; font-weight:600; letter-spacing:0.06em; text-transform:uppercase; color:var(--text-muted); margin-top:4px; }
+
+    .section-tabs { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:16px; margin-top:24px; }
+    .section-tab { padding:6px 14px; border:1.5px solid var(--border-med); border-radius:99px; background:var(--surface); font-size:0.78rem; font-weight:500; color:var(--text-muted); cursor:pointer; transition:all 0.15s; }
+    .section-tab:hover, .section-tab.active { background:var(--text); color:var(--surface); border-color:var(--text); }
+  </style>
+</head>
+<body>
+  <a href="#main-content" class="skip-link">Skip to main content</a>
+  <div class="app-shell">
+    <aside class="sidebar" aria-label="Main navigation"></aside>
+    <button id="navToggle" class="nav-toggle" aria-label="Open navigation menu" aria-expanded="false">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+    </button>
+    <main class="main-content" id="main-content">
+      <a href="courses.html" class="course-back">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polyline points="15 18 9 12 15 6"/></svg>
+        Back to courses
+      </a>
+      <div id="courseContent"></div>
+    </main>
+  </div>
+
+  <script src="data.js"></script>
+  <script src="sidebar.js"></script>
+  <script>
+    requireAuth(); buildSidebar(); initMobileSidebar();
+
+    var courseId = new URLSearchParams(window.location.search).get('id');
+    var activeSection = 'all';
+
+    function render() {
+      var container = document.getElementById('courseContent');
+      if (!courseId) { container.innerHTML = '<div class="empty-state"><div class="empty-state-icon">❓</div><div class="empty-state-text">No course selected.</div></div>'; return; }
+
+      var course = getCourses().find(function(c) { return c.id === courseId; });
+      if (!course) { container.innerHTML = '<div class="empty-state"><div class="empty-state-icon">❓</div><div class="empty-state-text">Course not found.</div></div>'; return; }
+
+      document.title = 'UniCal – ' + course.label;
+      var items = getTrackItemsForCourse(courseId);
+
+      var pendingDL = items.deadlines.filter(function(d) { return !d.done; }).length;
+      var pendingTK = items.tasks.filter(function(t) { return !t.done; }).length;
+      var pendingASG = items.assignments.filter(function(a) { return !a.done; }).length;
+      var pendingEV = items.events.filter(function(e) { return !e.done; }).length;
+      var pendingEX = items.exams.filter(function(x) { return !x.done; }).length;
+      var noteCount = items.notes.length;
+
+      var html = '';
+
+      /* Header */
+      html += '<div class="course-header-bar">' +
+        '<div class="course-swatch-lg" style="background:' + course.bg + '"></div>' +
+        '<div><div class="course-title-lg">' + course.label + '</div>' +
+        '<div style="font-size:0.82rem;color:var(--text-muted);margin-top:2px">' + (pendingDL + pendingTK + pendingASG + pendingEV + pendingEX) + ' pending items · ' + noteCount + ' note' + (noteCount !== 1 ? 's' : '') + '</div></div>' +
+      '</div>';
+
+      /* Stats row */
+      html += '<div class="cd-stats-row">' +
+        buildStat(pendingDL, 'Deadlines', 'var(--urgent)') +
+        buildStat(pendingTK, 'Tasks', 'var(--low)') +
+        buildStat(pendingASG, 'Assignments', 'var(--medium)') +
+        buildStat(pendingEV, 'Events', 'var(--high)') +
+        buildStat(pendingEX, 'Exams', 'var(--accent-pink)') +
+      '</div>';
+
+      /* Section tabs */
+      var sections = [
+        { key: 'all', label: 'All' },
+        { key: 'deadlines', label: 'Deadlines' },
+        { key: 'tasks', label: 'Tasks' },
+        { key: 'assignments', label: 'Assignments' },
+        { key: 'events', label: 'Events' },
+        { key: 'exams', label: 'Exams' },
+        { key: 'notes', label: 'Notes' }
+      ];
+      html += '<div class="section-tabs">';
+      sections.forEach(function(s) {
+        html += '<button class="section-tab' + (activeSection === s.key ? ' active' : '') + '" onclick="setSection(\'' + s.key + '\')">' + s.label + '</button>';
+      });
+      html += '</div>';
+
+      /* Items */
+      html += '<div id="sectionContent"></div>';
+
+      container.innerHTML = html;
+      renderSection(items, course);
+    }
+
+    function buildStat(val, label, color) {
+      return '<div class="cd-stat"><div class="cd-stat-val" style="color:' + color + '">' + val + '</div><div class="cd-stat-label">' + label + '</div></div>';
+    }
+
+    function setSection(key) {
+      activeSection = key;
+      /* Update tab UI */
+      document.querySelectorAll('.section-tab').forEach(function(t) { t.classList.remove('active'); });
+      event.target.classList.add('active');
+      var items = getTrackItemsForCourse(courseId);
+      var course = getCourses().find(function(c) { return c.id === courseId; });
+      renderSection(items, course);
+    }
+
+    function renderSection(items, course) {
+      var sec = document.getElementById('sectionContent');
+      if (!sec) return;
+      var html = '';
+
+      if (activeSection === 'all' || activeSection === 'deadlines') {
+        html += buildItemSection('Deadlines', items.deadlines, course, 'deadline', 'deadlines.html');
+      }
+      if (activeSection === 'all' || activeSection === 'tasks') {
+        html += buildItemSection('Tasks', items.tasks, course, 'task', 'tasks.html');
+      }
+      if (activeSection === 'all' || activeSection === 'assignments') {
+        html += buildItemSection('Assignments', items.assignments, course, 'assignment', 'assignments.html');
+      }
+      if (activeSection === 'all' || activeSection === 'events') {
+        html += buildItemSection('Events', items.events, course, 'event', 'events.html');
+      }
+      if (activeSection === 'all' || activeSection === 'exams') {
+        html += buildExamsSection(items.exams, course);
+      }
+      if (activeSection === 'all' || activeSection === 'notes') {
+        html += buildNotesSection(items.notes, course);
+      }
+
+      sec.innerHTML = html;
+    }
+
+    function buildItemSection(title, list, course, type, page) {
+      var pending = list.filter(function(x) { return !x.done; });
+      var done = list.filter(function(x) { return x.done; });
+      var sorted = pending.sort(function(a, b) { return a.due.localeCompare(b.due); }).concat(done);
+
+      var html = '<h3 class="section-title">' + title + ' <span class="section-count">' + pending.length + ' pending</span></h3>';
+
+      if (!sorted.length) {
+        html += '<div class="cd-empty">No ' + title.toLowerCase() + ' for this course.</div>';
+        return html;
+      }
+
+      html += '<div class="cd-list">';
+      sorted.forEach(function(item, i) {
+        var days = daysUntil(item.due);
+        var urgency = item.done ? '' : (days < 0 ? 'Overdue' : days === 0 ? 'Today' : days + 'd');
+        var urgColor = days < 0 ? 'var(--urgent)' : days <= 3 ? 'var(--high)' : 'var(--text-muted)';
+        var timeStr = '';
+        if (type === 'event') {
+          if (item.timeStart) timeStr = fmtTime(item.timeStart);
+          if (item.timeStart && item.timeEnd) timeStr += '–' + fmtTime(item.timeEnd);
+        } else {
+          if (item.time) timeStr = fmtTime(item.time);
+        }
+
+        html += '<div class="cd-card' + (item.done ? ' done' : '') + '" style="animation-delay:' + (i * 0.03) + 's" onclick="window.location.href=\'' + page + '\'">' +
+          '<div class="cd-stripe" style="background:' + course.bg + '"></div>' +
+          '<div class="cd-body">' +
+            '<div class="cd-title">' + item.title + '</div>' +
+            '<div class="cd-meta">' +
+              '<span class="badge badge-' + item.priority + '">' + item.priority + '</span>' +
+              '<span>' + fmtDate(item.due) + (timeStr ? ' · ' + timeStr : '') + '</span>' +
+              (!item.done && urgency ? '<span style="color:' + urgColor + ';font-weight:600">' + urgency + '</span>' : '') +
+            '</div>' +
+          '</div>' +
+        '</div>';
+      });
+      html += '</div>';
+      return html;
+    }
+
+    function buildExamsSection(list, course) {
+      var pending = list.filter(function(x) { return !x.done; });
+      var done = list.filter(function(x) { return x.done; });
+      var sorted = pending.sort(function(a, b) { return a.due.localeCompare(b.due); }).concat(done);
+
+      var html = '<h3 class="section-title">Exams <span class="section-count">' + pending.length + ' upcoming</span></h3>';
+
+      if (!sorted.length) {
+        html += '<div class="cd-empty">No exams for this course.</div>';
+        return html;
+      }
+
+      html += '<div class="cd-list">';
+      sorted.forEach(function(ex, i) {
+        var days = daysUntil(ex.due);
+        var urgency = ex.done ? '' : (days < 0 ? 'Passed' : days === 0 ? 'Today' : days + 'd');
+        var urgColor = days < 0 ? 'var(--text-muted)' : days <= 3 ? 'var(--urgent)' : 'var(--text-muted)';
+        var timeStr = ex.time ? fmtTime(ex.time) : '';
+        var locStr = ex.location ? '<span class="cd-location"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>' + ex.location + '</span>' : '';
+
+        html += '<div class="cd-card' + (ex.done ? ' done' : '') + '" style="animation-delay:' + (i * 0.03) + 's" onclick="window.location.href=\'exams.html\'">' +
+          '<div class="cd-stripe" style="background:' + course.bg + '"></div>' +
+          '<div class="cd-body">' +
+            '<div class="cd-title">' + ex.title + '</div>' +
+            '<div class="cd-meta">' +
+              '<span class="badge badge-' + ex.priority + '">' + ex.priority + '</span>' +
+              '<span>' + fmtDate(ex.due) + (timeStr ? ' · ' + timeStr : '') + '</span>' +
+              locStr +
+              (!ex.done && urgency ? '<span style="color:' + urgColor + ';font-weight:600">' + urgency + '</span>' : '') +
+            '</div>' +
+            (ex.notes ? '<div style="font-size:0.72rem;color:var(--text-muted);margin-top:4px">' + ex.notes + '</div>' : '') +
+          '</div>' +
+        '</div>';
+      });
+      html += '</div>';
+      return html;
+    }
+
+    function buildNotesSection(list, course) {
+      var html = '<h3 class="section-title">Notes <span class="section-count">' + list.length + '</span></h3>';
+
+      if (!list.length) {
+        html += '<div class="cd-empty">No notes for this course. <a href="notes.html" style="color:var(--accent-slate)">Create one →</a></div>';
+        return html;
+      }
+
+      list.sort(function(a, b) { return (b.updated || '').localeCompare(a.updated || ''); });
+      list.forEach(function(n, i) {
+        var preview = (n.content || '').replace(/[#*_`>\-\[\]()]/g, '').slice(0, 80);
+        var dateStr = n.updated ? new Date(n.updated).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) : '';
+        html += '<div class="note-card" style="animation-delay:' + (i * 0.03) + 's" onclick="window.location.href=\'notes.html\'">' +
+          '<div class="note-card-title">' + (n.title || 'Untitled') + '</div>' +
+          (preview ? '<div class="note-card-preview">' + preview + '</div>' : '') +
+          '<div class="note-card-date">' + dateStr + '</div>' +
+        '</div>';
+      });
+      return html;
+    }
+
+    render();
+  </script>
+</body>
+</html>

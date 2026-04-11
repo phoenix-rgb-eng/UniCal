@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>UniCal – Calendar</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;1,9..144,300&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="global.css"/>
+  <style>
+    .cal-layout { display:grid; grid-template-columns:1fr 280px; gap:20px; align-items:start; }
+    .cal-nav { display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; }
+    .cal-month-title { font-family:var(--font-display); font-size:1.4rem; font-weight:300; letter-spacing:-0.02em; }
+    .cal-nav-btns { display:flex; gap:6px; }
+    .cal-nav-btn { width:34px; height:34px; border-radius:var(--radius-sm); background:var(--surface-2); border:1.5px solid var(--border); display:flex; align-items:center; justify-content:center; cursor:pointer; color:var(--text-muted); transition:all 0.15s ease; }
+    .cal-nav-btn:hover { background:var(--surface-3); color:var(--text); }
+    .today-btn { padding:6px 14px; border-radius:var(--radius-sm); background:var(--surface-2); border:1.5px solid var(--border); font-size:0.78rem; font-weight:500; cursor:pointer; color:var(--text-muted); transition:all 0.15s; }
+    .today-btn:hover { background:var(--surface-3); color:var(--text); }
+
+    .cal-grid-wrap { background:var(--surface); border:1.5px solid var(--border); border-radius:var(--radius); overflow:hidden; box-shadow:var(--shadow-sm); }
+    .cal-grid { display:grid; grid-template-columns:repeat(7,1fr); }
+    .cal-day-hdr { padding:10px 4px; text-align:center; font-size:0.7rem; font-weight:600; letter-spacing:0.06em; text-transform:uppercase; color:var(--text-muted); background:var(--surface-2); border-bottom:1px solid var(--border); }
+    .cal-cell { min-height:84px; padding:6px; border-right:1px solid var(--border); border-bottom:1px solid var(--border); cursor:pointer; transition:background 0.12s ease; position:relative; }
+    .cal-cell:nth-child(7n) { border-right:none; }
+    .cal-cell:hover { background:var(--surface-2); }
+    .cal-cell.other-month { opacity:0.35; pointer-events:none; }
+    .cal-cell.is-today .cal-day-num { background:var(--text); color:var(--surface); border-radius:50%; width:24px; height:24px; display:flex; align-items:center; justify-content:center; }
+    .cal-cell.selected { background:var(--surface-2); }
+    .cal-day-num { font-size:0.82rem; font-weight:500; margin-bottom:4px; width:24px; height:24px; display:flex; align-items:center; justify-content:center; }
+    .cal-dot-row { display:flex; flex-wrap:wrap; gap:3px; }
+    .cal-dot { width:7px; height:7px; border-radius:50%; flex-shrink:0; }
+
+    .day-panel { background:var(--surface); border:1.5px solid var(--border); border-radius:var(--radius); padding:20px; box-shadow:var(--shadow-sm); position:sticky; top:24px; }
+    .day-panel-title { font-family:var(--font-display); font-size:1.1rem; font-weight:300; margin-bottom:16px; }
+    .day-ev { display:flex; align-items:center; gap:10px; padding:10px 0; border-bottom:1px solid var(--border); animation:fadeUp 0.25s ease both; }
+    .day-ev:last-child { border-bottom:none; }
+    .day-ev-stripe { width:3px; height:32px; border-radius:2px; flex-shrink:0; }
+    .day-ev-name { font-size:0.85rem; font-weight:500; flex:1; }
+    .day-ev-meta { font-size:0.72rem; color:var(--text-muted); }
+    .day-ev-type { font-size:0.62rem; font-weight:600; text-transform:uppercase; letter-spacing:0.05em; padding:1px 6px; border-radius:4px; background:var(--surface-2); color:var(--text-muted); }
+
+    .day-panel-actions { display:flex; gap:8px; margin-top:14px; padding-top:14px; border-top:1px solid var(--border); }
+
+    .legend { margin-top:16px; padding-top:16px; border-top:1px solid var(--border); }
+    .legend-title { font-size:0.68rem; font-weight:600; letter-spacing:0.08em; text-transform:uppercase; color:var(--text-muted); margin-bottom:8px; }
+    .legend-item { display:flex; align-items:center; gap:8px; font-size:0.78rem; color:var(--text-muted); margin-bottom:5px; }
+    .legend-dot { width:10px; height:10px; border-radius:50%; flex-shrink:0; }
+
+    /* ICS toolbar */
+    .ics-toolbar { display:flex; gap:8px; align-items:center; }
+    .ics-toolbar .btn-ghost { padding:6px 12px; font-size:0.75rem; }
+    .ics-file-input { display:none; }
+
+    @media (max-width:860px) {
+      .cal-layout { grid-template-columns:1fr; }
+      .day-panel { position:static; }
+      .cal-cell { min-height:60px; }
+    }
+  </style>
+</head>
+<body>
+  <a href="#main-content" class="skip-link">Skip to main content</a>
+  <div class="app-shell">
+    <aside class="sidebar" aria-label="Main navigation"></aside>
+    <button id="navToggle" class="nav-toggle" aria-label="Open navigation menu" aria-expanded="false">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+    </button>
+    <main class="main-content" id="main-content">
+      <header class="page-header">
+        <div><h1 class="page-title"><em>Calendar</em></h1><p class="page-subtitle">See all your items in one view.</p></div>
+        <div class="ics-toolbar">
+          <button class="btn btn-ghost btn-sm" onclick="exportICS()" aria-label="Export to .ics">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            Export .ics
+          </button>
+          <button class="btn btn-ghost btn-sm" onclick="document.getElementById('icsFileInput').click()" aria-label="Import .ics file">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+            Import .ics
+          </button>
+          <input type="file" id="icsFileInput" class="ics-file-input" accept=".ics,.ical" onchange="importICS(this)"/>
+        </div>
+      </header>
+      <div class="cal-layout">
+        <div>
+          <div class="cal-nav" aria-label="Calendar navigation">
+            <h2 class="cal-month-title" id="calMonthTitle" aria-live="polite"></h2>
+            <div style="display:flex;gap:10px;align-items:center">
+              <button class="today-btn" onclick="goToday()" aria-label="Go to today">Today</button>
+              <div class="cal-nav-btns">
+                <button class="cal-nav-btn" onclick="shiftMonth(-1)" aria-label="Previous month"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><polyline points="15 18 9 12 15 6"/></svg></button>
+                <button class="cal-nav-btn" onclick="shiftMonth(1)"  aria-label="Next month"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><polyline points="9 18 15 12 9 6"/></svg></button>
+              </div>
+            </div>
+          </div>
+          <div class="cal-grid-wrap" role="grid" aria-label="Monthly calendar">
+            <div class="cal-grid" role="row">
+              <div class="cal-day-hdr" role="columnheader" abbr="Monday">Mon</div>
+              <div class="cal-day-hdr" role="columnheader" abbr="Tuesday">Tue</div>
+              <div class="cal-day-hdr" role="columnheader" abbr="Wednesday">Wed</div>
+              <div class="cal-day-hdr" role="columnheader" abbr="Thursday">Thu</div>
+              <div class="cal-day-hdr" role="columnheader" abbr="Friday">Fri</div>
+              <div class="cal-day-hdr" role="columnheader" abbr="Saturday">Sat</div>
+              <div class="cal-day-hdr" role="columnheader" abbr="Sunday">Sun</div>
+            </div>
+            <div class="cal-grid" id="calCells" role="row"></div>
+          </div>
+        </div>
+        <aside class="day-panel" aria-label="Selected day events">
+          <h2 class="day-panel-title" id="dayPanelTitle"><em>Select</em> a day</h2>
+          <div id="dayEvents"><div class="empty-state"><div class="empty-state-icon">📅</div><div class="empty-state-text">Click a date to see events.</div></div></div>
+          <div id="dayPanelActions"></div>
+          <div class="legend" id="calLegend" aria-label="Course colour legend"></div>
+        </aside>
+      </div>
+    </main>
+  </div>
+
+  <!-- Quick note modal -->
+  <div class="modal-overlay" id="noteModal" role="dialog" aria-modal="true" aria-labelledby="noteModalTitle">
+    <div class="modal">
+      <div class="modal-header">
+        <h2 class="modal-title" id="noteModalTitle">Add <em>note</em></h2>
+        <button class="modal-close" onclick="closeNoteModal()" aria-label="Close dialog">&times;</button>
+      </div>
+      <div class="field-group"><label class="field-label" for="qn-title">Title *</label><input class="field-input" id="qn-title" type="text" placeholder="e.g. Lecture summary" required aria-required="true"/></div>
+      <div class="field-group"><label class="field-label" for="qn-course">Course *</label><select class="field-select" id="qn-course" required aria-required="true"></select></div>
+      <div class="field-group"><label class="field-label" for="qn-content">Note content</label><textarea class="field-textarea" id="qn-content" placeholder="Write in markdown…" rows="5"></textarea></div>
+      <div class="form-error" id="qn-error" role="alert" aria-live="polite"></div>
+      <div class="modal-actions">
+        <button class="btn btn-ghost" onclick="closeNoteModal()">Cancel</button>
+        <button class="btn btn-primary" onclick="saveQuickNote()">Save note</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="data.js"></script>
+  <script src="sidebar.js"></script>
+  <script>
+    requireAuth(); buildSidebar(); initMobileSidebar();
+    var MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+    var viewYear=new Date().getFullYear(), viewMonth=new Date().getMonth(), selectedDate=null;
+
+    function shiftMonth(d) { viewMonth+=d; if(viewMonth>11){viewMonth=0;viewYear++;}else if(viewMonth<0){viewMonth=11;viewYear--;} renderCal(); }
+    function goToday() { var n=new Date(); viewYear=n.getFullYear(); viewMonth=n.getMonth(); renderCal(); }
+
+    function buildEventMap() {
+      var map={};
+      var allItems = getAllPendingTrackItems();
+      allItems.forEach(function(ev){ if(!map[ev.due])map[ev.due]=[]; map[ev.due].push(ev); });
+      return map;
+    }
+
+    function renderCal() {
+      document.getElementById('calMonthTitle').textContent=MONTHS[viewMonth]+' '+viewYear;
+      var map=buildEventMap();
+      var firstDay=new Date(viewYear,viewMonth,1);
+      var startDow=firstDay.getDay(); startDow=startDow===0?6:startDow-1;
+      var daysInMonth=new Date(viewYear,viewMonth+1,0).getDate();
+      var daysInPrev=new Date(viewYear,viewMonth,0).getDate();
+      var todayStr=todayISO();
+      var cells=document.getElementById('calCells'); cells.innerHTML='';
+      var total=Math.ceil((startDow+daysInMonth)/7)*7;
+      for(var i=0;i<total;i++){
+        var day,month,year,isOther=false;
+        if(i<startDow){day=daysInPrev-startDow+i+1;month=viewMonth-1;year=viewYear;if(month<0){month=11;year--;}isOther=true;}
+        else if(i>=startDow+daysInMonth){day=i-startDow-daysInMonth+1;month=viewMonth+1;year=viewYear;if(month>11){month=0;year++;}isOther=true;}
+        else{day=i-startDow+1;month=viewMonth;year=viewYear;}
+        var iso=year+'-'+String(month+1).padStart(2,'0')+'-'+String(day).padStart(2,'0');
+        var isToday=iso===todayStr, isSelected=iso===selectedDate, dayEvs=map[iso]||[];
+        var cell=document.createElement('div');
+        cell.className='cal-cell'+(isOther?' other-month':'')+(isToday?' is-today':'')+(isSelected?' selected':'');
+        cell.setAttribute('role','gridcell');
+        cell.setAttribute('aria-label',day+' '+MONTHS[month]+' '+year+(dayEvs.length?', '+dayEvs.length+' event'+(dayEvs.length!==1?'s':''):''));
+        if(isSelected)cell.setAttribute('aria-selected','true');
+        if(!isOther)(function(cellIso,cellDay,cellMonth){cell.onclick=function(){selectDay(cellIso,cellDay,cellMonth);};})(iso,day,month);
+        var numEl=document.createElement('div'); numEl.className='cal-day-num'; numEl.textContent=day; numEl.setAttribute('aria-hidden','true');
+        cell.appendChild(numEl);
+        if(dayEvs.length){var dr=document.createElement('div');dr.className='cal-dot-row';dr.setAttribute('aria-hidden','true');dayEvs.slice(0,6).forEach(function(ev){var c=courseById(ev.course);var dot=document.createElement('div');dot.className='cal-dot';dot.style.background=c.bg;dr.appendChild(dot);});cell.appendChild(dr);}
+        cells.appendChild(cell);
+      }
+      renderLegend();
+    }
+
+    function selectDay(iso,day,month){
+      selectedDate=iso; renderCal();
+      document.getElementById('dayPanelTitle').innerHTML=day+' <em>'+MONTHS[month]+'</em>';
+      var all=getAllTrackItemsForDate(iso);
+      var ev=document.getElementById('dayEvents'); ev.innerHTML='';
+      if(!all.length){ev.innerHTML='<div class="empty-state"><div class="empty-state-icon">✨</div><div class="empty-state-text">Nothing due — free day!</div></div>';}
+      else {
+        all.forEach(function(item,i){
+          var c=courseById(item.course);
+          var typeLabel=item._type.charAt(0).toUpperCase()+item._type.slice(1);
+          var timeStr = '';
+          if (item._type === 'event') {
+            if (item.timeStart) { timeStr = fmtTime(item.timeStart); if (item.timeEnd) timeStr += '–' + fmtTime(item.timeEnd); }
+          } else if (item.time) { timeStr = fmtTime(item.time); }
+          var el=document.createElement('div');el.className='day-ev';el.style.animationDelay=i*.05+'s';
+          el.innerHTML='<div class="day-ev-stripe" style="background:'+c.bg+'" aria-hidden="true"></div>'+
+            '<div style="flex:1;min-width:0"><div class="day-ev-name">'+item.title+'</div>'+
+            '<div class="day-ev-meta">'+c.label+(timeStr?' · '+timeStr:'')+' <span class="day-ev-type">'+typeLabel+'</span></div></div>'+
+            '<span class="badge badge-'+item.priority+'">'+item.priority+'</span>';
+          ev.appendChild(el);
+        });
+      }
+
+      /* Show "Add note" button for selected day */
+      var actionsEl = document.getElementById('dayPanelActions');
+      actionsEl.innerHTML = '<div class="day-panel-actions">' +
+        '<button class="btn btn-ghost btn-sm" onclick="openQuickNote(\'' + iso + '\')" style="flex:1;justify-content:center">' +
+          '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>' +
+          'Add note for this day' +
+        '</button>' +
+      '</div>';
+    }
+
+    function renderLegend(){
+      document.getElementById('calLegend').innerHTML='<div class="legend-title">Courses</div>'+
+        getCourses().map(function(c){return '<div class="legend-item"><div class="legend-dot" style="background:'+c.bg+'" aria-hidden="true"></div>'+c.label+'</div>';}).join('');
+    }
+
+    /* ── Quick Note Modal ── */
+    var quickNoteDate = null;
+
+    function openQuickNote(iso) {
+      quickNoteDate = iso;
+      var courses = getCourses();
+      var sel = document.getElementById('qn-course');
+      sel.innerHTML = '';
+      courses.forEach(function(c) {
+        var opt = document.createElement('option');
+        opt.value = c.id; opt.textContent = c.label;
+        sel.appendChild(opt);
+      });
+      document.getElementById('qn-title').value = 'Note — ' + fmtDate(iso);
+      document.getElementById('qn-content').value = '';
+      document.getElementById('qn-error').textContent = '';
+      document.getElementById('noteModalTitle').innerHTML = 'Add <em>note</em> for ' + fmtDate(iso);
+      document.getElementById('noteModal').classList.add('open');
+      setTimeout(function() { document.getElementById('qn-title').focus(); document.getElementById('qn-title').select(); }, 100);
+    }
+
+    function closeNoteModal() {
+      document.getElementById('noteModal').classList.remove('open');
+    }
+
+    function saveQuickNote() {
+      var errEl = document.getElementById('qn-error');
+      errEl.textContent = '';
+      var title = document.getElementById('qn-title').value.trim();
+      var course = document.getElementById('qn-course').value;
+      var content = document.getElementById('qn-content').value;
+      if (!title) { errEl.textContent = 'Please enter a title.'; return; }
+
+      var notes = getNotes();
+      var now = new Date().toISOString();
+      notes.unshift({
+        id: Date.now(),
+        title: title,
+        content: content,
+        course: course,
+        date: quickNoteDate,
+        created: now,
+        updated: now
+      });
+      saveNotes(notes);
+      closeNoteModal();
+      showToast('Note added ✓');
+    }
+
+    document.getElementById('noteModal').addEventListener('click', function(e) {
+      if (e.target === document.getElementById('noteModal')) closeNoteModal();
+    });
+    document.addEventListener('keydown', function(e) {
+      if (e.key === 'Escape') closeNoteModal();
+    });
+
+    /* ── ICS Export ── */
+    function exportICS() {
+      var lines = [];
+      lines.push('BEGIN:VCALENDAR');
+      lines.push('VERSION:2.0');
+      lines.push('PRODID:-//UniCal//EN');
+      lines.push('CALSCALE:GREGORIAN');
+      lines.push('METHOD:PUBLISH');
+      lines.push('X-WR-CALNAME:UniCal');
+
+      function addEvent(item, type) {
+        var c = courseById(item.course);
+        var uid = type + '-' + item.id + '@unical';
+        var dtDate = item.due.replace(/-/g, '');
+
+        /* Determine time */
+        var hasTime = false;
+        var dtStart = dtDate;
+        var dtEnd = dtDate;
+
+        if (type === 'event' && item.timeStart) {
+          hasTime = true;
+          dtStart = dtDate + 'T' + item.timeStart.replace(':', '') + '00';
+          if (item.timeEnd) {
+            dtEnd = dtDate + 'T' + item.timeEnd.replace(':', '') + '00';
+          } else {
+            /* Default 1hr duration */
+            var sh = parseInt(item.timeStart.split(':')[0]);
+            var sm = item.timeStart.split(':')[1];
+            dtEnd = dtDate + 'T' + String(sh + 1).padStart(2, '0') + sm + '00';
+          }
+        } else if (item.time) {
+          hasTime = true;
+          dtStart = dtDate + 'T' + item.time.replace(':', '') + '00';
+          /* 1hr duration for timed items */
+          var h = parseInt(item.time.split(':')[0]);
+          var m = item.time.split(':')[1];
+          dtEnd = dtDate + 'T' + String(h + 1).padStart(2, '0') + m + '00';
+        }
+
+        lines.push('BEGIN:VEVENT');
+        lines.push('UID:' + uid);
+        lines.push('SUMMARY:' + escICS(item.title));
+        if (hasTime) {
+          lines.push('DTSTART:' + dtStart);
+          lines.push('DTEND:' + dtEnd);
+        } else {
+          lines.push('DTSTART;VALUE=DATE:' + dtDate);
+          /* All-day event: end date is next day per spec */
+          var endD = new Date(item.due + 'T00:00:00');
+          endD.setDate(endD.getDate() + 1);
+          var endStr = endD.toISOString().slice(0, 10).replace(/-/g, '');
+          lines.push('DTEND;VALUE=DATE:' + endStr);
+        }
+        lines.push('DESCRIPTION:' + escICS('[' + type.toUpperCase() + '] ' + c.label + (item.notes ? '\\n' + item.notes : '') + (item.location ? '\\nLocation: ' + item.location : '')));
+        if (item.location) lines.push('LOCATION:' + escICS(item.location));
+        lines.push('CATEGORIES:' + escICS(c.label));
+        lines.push('STATUS:' + (item.done ? 'COMPLETED' : 'CONFIRMED'));
+        if (item.priority === 'urgent') lines.push('PRIORITY:1');
+        else if (item.priority === 'high') lines.push('PRIORITY:3');
+        else if (item.priority === 'medium') lines.push('PRIORITY:5');
+        else lines.push('PRIORITY:9');
+        lines.push('END:VEVENT');
+      }
+
+      getDeadlines().forEach(function(d) { addEvent(d, 'deadline'); });
+      getTasks().forEach(function(t) { addEvent(t, 'task'); });
+      getAssignments().forEach(function(a) { addEvent(a, 'assignment'); });
+      getEvents().forEach(function(e) { addEvent(e, 'event'); });
+      getExams().forEach(function(x) { addEvent(x, 'exam'); });
+
+      lines.push('END:VCALENDAR');
+
+      var blob = new Blob([lines.join('\r\n')], { type: 'text/calendar;charset=utf-8' });
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement('a');
+      a.href = url;
+      a.download = 'unical-export.ics';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      showToast('Calendar exported!');
+    }
+
+    function escICS(str) {
+      if (!str) return '';
+      return str.replace(/\\/g, '\\\\').replace(/;/g, '\\;').replace(/,/g, '\\,').replace(/\n/g, '\\n');
+    }
+
+    /* ── ICS Import ── */
+    function importICS(input) {
+      var file = input.files[0];
+      if (!file) return;
+
+      var reader = new FileReader();
+      reader.onload = function(e) {
+        var text = e.target.result;
+        var events = parseICS(text);
+        if (!events.length) {
+          showToast('No events found in file.', 'error');
+          input.value = '';
+          return;
+        }
+
+        /* Import as deadlines by default */
+        var courses = getCourses();
+        var defaultCourse = courses.length ? courses[0].id : '';
+        var deadlines = getDeadlines();
+        var imported = 0;
+
+        events.forEach(function(ev) {
+          /* Try to match course by category */
+          var courseId = defaultCourse;
+          if (ev.categories) {
+            var match = courses.find(function(c) {
+              return c.label.toLowerCase() === ev.categories.toLowerCase();
+            });
+            if (match) courseId = match.id;
+          }
+
+          /* Check for duplicate by title + date */
+          var isDupe = deadlines.some(function(d) {
+            return d.title === ev.summary && d.due === ev.date;
+          });
+          if (isDupe) return;
+
+          deadlines.push({
+            id: nextId(deadlines),
+            title: ev.summary || 'Imported event',
+            course: courseId,
+            due: ev.date,
+            time: ev.time || '',
+            priority: ev.priority <= 1 ? 'urgent' : ev.priority <= 3 ? 'high' : ev.priority <= 5 ? 'medium' : 'low',
+            notes: (ev.description || '') + (ev.location ? ' | Location: ' + ev.location : ''),
+            done: false
+          });
+          imported++;
+        });
+
+        saveDeadlines(deadlines);
+        renderCal();
+        showToast(imported + ' event' + (imported !== 1 ? 's' : '') + ' imported as deadlines');
+        input.value = '';
+      };
+      reader.readAsText(file);
+    }
+
+    function parseICS(text) {
+      var events = [];
+      var blocks = text.split('BEGIN:VEVENT');
+      for (var i = 1; i < blocks.length; i++) {
+        var block = blocks[i].split('END:VEVENT')[0];
+        var ev = {};
+
+        var summaryMatch = block.match(/SUMMARY[^:]*:(.*)/);
+        if (summaryMatch) ev.summary = unescICS(summaryMatch[1].trim());
+
+        var dtStartMatch = block.match(/DTSTART[^:]*:(\d{8})/);
+        if (dtStartMatch) {
+          var d = dtStartMatch[1];
+          ev.date = d.slice(0, 4) + '-' + d.slice(4, 6) + '-' + d.slice(6, 8);
+        }
+
+        /* Try to get time */
+        var dtTimeMatch = block.match(/DTSTART[^:]*:(\d{8})T(\d{4})/);
+        if (dtTimeMatch) {
+          var t = dtTimeMatch[2];
+          ev.time = t.slice(0, 2) + ':' + t.slice(2, 4);
+        }
+
+        var descMatch = block.match(/DESCRIPTION[^:]*:(.*)/);
+        if (descMatch) ev.description = unescICS(descMatch[1].trim());
+
+        var locMatch = block.match(/LOCATION[^:]*:(.*)/);
+        if (locMatch) ev.location = unescICS(locMatch[1].trim());
+
+        var catMatch = block.match(/CATEGORIES[^:]*:(.*)/);
+        if (catMatch) ev.categories = unescICS(catMatch[1].trim());
+
+        var prioMatch = block.match(/PRIORITY[^:]*:(\d+)/);
+        ev.priority = prioMatch ? parseInt(prioMatch[1]) : 5;
+
+        if (ev.date && ev.summary) events.push(ev);
+      }
+      return events;
+    }
+
+    function unescICS(str) {
+      if (!str) return '';
+      return str.replace(/\\n/g, '\n').replace(/\\,/g, ',').replace(/\\;/g, ';').replace(/\\\\/g, '\\');
+    }
+
+    renderCal();
+  </script>
+</body>
+</html>
